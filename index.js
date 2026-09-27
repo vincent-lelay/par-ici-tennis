@@ -61,7 +61,7 @@ const bookTennis = async () => {
       await page.waitForLoadState('domcontentloaded')
 
 
-      letselectedHour
+      let selectedHour
       let totalSlotsFound = 0
       let totalSlotsRejected = 0
       
