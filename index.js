@@ -24,7 +24,7 @@ const bookTennis = async () => {
   const browser = await chromium.launch({
     headless: true,
     slowMo: 0,
-    timeout: 90000,
+    timeout: 30000,
   })
 
   console.log(`${dayjs().format()} - Browser started`)
