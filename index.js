@@ -60,37 +60,126 @@ const bookTennis = async () => {
       // wait until the results page is fully loaded before continue
       await page.waitForLoadState('domcontentloaded')
 
-      let selectedHour
+
+      letselectedHour
+      let totalSlotsFound = 0
+      let totalSlotsRejected = 0
+      
+      console.log(
+  `${dayjs().format()} - Search parameters: ` +
+  `location="${location}", ` +
+  `date="${date.format('DD/MM/YYYY')}", ` +
+  `hours=[${config.hours.join(', ')}], ` +
+  `priceType=[${config.priceType.join(', ')}], ` +
+  `courtType=[${config.courtType.join(', ')}]`
+)
       hoursLoop:
       for (const hour of config.hours) {
-        const dateDeb = `[datedeb="${date.format('YYYY/MM/DD')} ${hour}:00:00"]`
-        if (await page.locator(dateDeb).count()) {
-          if (await page.isHidden(dateDeb)) {
-            await page.click(`#head${location.replaceAll(' ', '')}${hour}h .panel-title`)
-          }
+  const dateDeb = `[datedeb="${date.format('YYYY/MM/DD')} ${hour}:00:00"]`
+  const slotCount = await page.locator(dateDeb).count()
 
-          const courtNumbers = !Array.isArray(config.locations) ? config.locations[location] : []
-          const slots = await page.locator(dateDeb).all()
-          for (const slot of slots) {
-            const bookSlotButton = `[courtid="${await slot.getAttribute('courtid')}"]${dateDeb}`
-            if (courtNumbers.length > 0) {
-              const courtName = (await page.locator(`.court:left-of(${bookSlotButton})`).innerText()).trim()
-              if (!courtNumbers.includes(parseInt(courtName.match(/Court N°(\d+)/)[1]))) {
-                continue
-              }
-            }
+  console.log(
+    `${dayjs().format()} - Hour ${hour}:00: ${slotCount} matching slot(s)`
+  )
 
-            const [priceType, courtType] = (await page.locator(`.row.tennis-court:has(${bookSlotButton})`).locator('.price-description').innerHTML()).split('<br>')
-            if (!config.priceType.includes(priceType) || !config.courtType.includes(courtType)) {
-              continue
-            }
-            selectedHour = hour
-            await page.click(bookSlotButton)
+  totalSlotsFound += slotCount
 
-            break hoursLoop
-          }
+  if (slotCount) {
+    if (await page.isHidden(dateDeb)) {
+      await page.click(
+        `#head${location.replaceAll(' ', '')}${hour}h .panel-title`
+      )
+    }
+
+    const courtNumbers =
+      !Array.isArray(config.locations)
+        ? config.locations[location]
+        : []
+
+    const slots = await page.locator(dateDeb).all()
+
+    for (const slot of slots) {
+      const courtId = await slot.getAttribute('courtid')
+      const bookSlotButton =
+        `[courtid="${courtId}"]${dateDeb}`
+
+      let courtName = 'unknown'
+
+      if (courtNumbers.length > 0) {
+        courtName = (
+          await page
+            .locator(`.court:left-of(${bookSlotButton})`)
+            .innerText()
+        ).trim()
+
+        const courtMatch = courtName.match(/Court N°(\d+)/)
+        const courtNumber = courtMatch
+          ? parseInt(courtMatch[1])
+          : NaN
+
+        if (!courtNumbers.includes(courtNumber)) {
+          console.log(
+            `${dayjs().format()} - Rejecting courtid=${courtId}, ` +
+            `court="${courtName}" because court number is not configured`
+          )
+          totalSlotsRejected++
+          continue
         }
       }
+
+      const priceDescription =
+        await page
+          .locator(
+            `.row.tennis-court:has(${bookSlotButton})`
+          )
+          .locator('.price-description')
+          .innerHTML()
+
+      const [priceType, courtType] =
+        priceDescription
+          .split('<br>')
+          .map(value => value.trim())
+
+      console.log(
+        `${dayjs().format()} - Candidate ` +
+        `courtid=${courtId}, ` +
+        `court="${courtName}", ` +
+        `priceType="${priceType}", ` +
+        `courtType="${courtType}"`
+      )
+
+      if (
+        !config.priceType.includes(priceType) ||
+        !config.courtType.includes(courtType)
+      ) {
+        console.log(
+          `${dayjs().format()} - Rejecting courtid=${courtId}: ` +
+          `price/court type does not match configuration`
+        )
+        totalSlotsRejected++
+        continue
+      }
+
+      console.log(
+        `${dayjs().format()} - ACCEPTING courtid=${courtId} ` +
+        `for ${hour}:00`
+      )
+
+      selectedHour = hour
+      await page.click(bookSlotButton)
+
+      break hoursLoop
+    }
+  }
+}
+
+console.log(
+  `${dayjs().format()} - Search summary: ` +
+  `${totalSlotsFound} slot(s) found, ` +
+  `${totalSlotsRejected} rejected, ` +
+  `selectedHour=${selectedHour ?? 'none'}, ` +
+  `pageTitle="${await page.title()}"`
+)
 
       if (await page.title() !== 'Paris | TENNIS - Reservation') {
         console.log(`${dayjs().format()} - Failed to find reservation for ${logLocation}`)
