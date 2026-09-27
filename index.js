@@ -60,6 +60,23 @@ const bookTennis = async () => {
       // wait until the results page is fully loaded before continue
       await page.waitForLoadState('domcontentloaded')
 
+      // Diagnostic: afficher tous les créneaux retournés par le site
+const allSlots = await page.locator('[datedeb]').evaluateAll(elements =>
+  elements.map(el => ({
+    datedeb: el.getAttribute('datedeb'),
+    courtid: el.getAttribute('courtid')
+  }))
+)
+
+console.log(
+  `${dayjs().format()} - All returned slots (${allSlots.length}):`
+)
+
+for (const slot of allSlots) {
+  console.log(
+    `${dayjs().format()} - datedeb="${slot.datedeb}", courtid="${slot.courtid}"`
+  )
+}
 
       let selectedHour
       let totalSlotsFound = 0
