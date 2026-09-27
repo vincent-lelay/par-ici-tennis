@@ -438,6 +438,69 @@ const bookTennis = async () => {
       // Payment
       // ------------------------------------------------------------
 
+      console.log(
+  `${dayjs().format()} - Reservation page reached`
+)
+
+console.log(
+  `${dayjs().format()} - Page URL: ${page.url()}`
+)
+
+console.log(
+  `${dayjs().format()} - Page title: ${await page.title()}`
+)
+
+console.log(
+  `${dayjs().format()} - Forms:`,
+  await page.locator('form').evaluateAll(forms =>
+    forms.map(form => ({
+      id: form.id,
+      action: form.getAttribute('action'),
+      className: form.className,
+    }))
+  )
+)
+
+console.log(
+  `${dayjs().format()} - Selects:`,
+  await page.locator('select').evaluateAll(selects =>
+    selects.map(select => ({
+      id: select.id,
+      name: select.name,
+      value: select.value,
+      options: Array.from(select.options).map(option => ({
+        value: option.value,
+        text: option.textContent?.trim(),
+      })),
+    }))
+  )
+)
+
+console.log(
+  `${dayjs().format()} - Inputs:`,
+  await page.locator('input').evaluateAll(inputs =>
+    inputs.map(input => ({
+      id: input.id,
+      name: input.name,
+      type: input.type,
+      value: input.value,
+    }))
+  )
+)
+
+console.log(
+  `${dayjs().format()} - Buttons:`,
+  await page.locator('button, input[type="submit"], input[type="button"]')
+    .evaluateAll(buttons =>
+      buttons.map(button => ({
+        id: button.id,
+        name: button.getAttribute('name'),
+        type: button.getAttribute('type'),
+        text: button.textContent?.trim(),
+        value: button.getAttribute('value'),
+      }))
+    )
+)
       await page.waitForSelector(
         '#order_select_payment_form #paymentMode',
         { state: 'attached' }
